@@ -1,25 +1,19 @@
-language: ruby
+language: node_js
 os: linux
 sudo: required
 dist: trusty
-group: edge
+group: deprecated-2017Q4
 node_js:
   - "7"
 env:
   global:
     secure: dn0FPQ5IG4M/3kdwnyI78ElQ308Vc3QnKAvkWfwMFb8QxDqxQdnTo7AV1qTMtbLrDNkeEWIgi4nc7jmXNtvGTwOfhAULVh6606Qs5B+ezTdwzajbbFMI8SKQx/pnTojOMu8dx7V4lMoR/YWcojR0VC1IWVC62TGbSB1k5BDGgH0=
-before_install:
-  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-  - sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-  - sudo apt-get update
-  - sudo apt-get -y install docker-ce
-  - docker version
 install:
-- git clone https://github.com/openworm/org.geppetto.model.git --quiet -b update-virgo-test
+- git clone https://github.com/openworm/org.geppetto.model.git --quiet -b development
 - cd org.geppetto.model
 - mvn install
 - cd ..
-- git clone https://github.com/openworm/org.geppetto.core.git --quiet -b update-virgo-test
+- git clone https://github.com/openworm/org.geppetto.core.git --quiet -b development
 - cd org.geppetto.core
 - mvn install
 - cd ..
@@ -49,89 +43,58 @@ before_script:
   - "sh -e /etc/init.d/xvfb start"
   - export SLIMERJSLAUNCHER=/home/travis/firefox-58.0/firefox/firefox
   - export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/
-  - sudo sh -c 'echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6'
 script:
   - firefox -v
   - slimerjs -v
   - phantomjs -v
-  - docker --version
-  - docker images
-  - docker ps -a
+  - casperjs --version
   - docker network inspect bridge
   - netstat -nr
   - netstat -tulpn
   - lsof -n -i TCP
-  - casperjs --version
+  - echo "Current time :$(date +"%T")"
   - cd org.geppetto.frontend/src/main/webapp/js/pages/tests/casperjs
   - echo "$TRAVIS_BRANCH"
-  - travis_retry docker build -t="geppetto_persistence" --build-arg mainBranch=update-virgo-test --build-arg aKey=$accessKey --build-arg sKey=$secretKey https://github.com/openworm/org.geppetto.git#update-virgo:utilities/docker/geppetto-persistence/
-  - travis_retry docker run -d --name geppetto_persistence_container -h localhost -p 8080:8080 geppetto_persistence;
+  - travis_retry docker build -t="geppetto_persistence" --build-arg frontendBranch=development --build-arg persistenceBranch=development --build-arg aKey=$accessKey --build-arg sKey=$secretKey https://github.com/openworm/org.geppetto.git#development:utilities/docker/geppetto-persistence/
+  - echo "Current time :$(date +"%T")"
+  - travis_retry docker run  -t -dit --name=geppetto_persistence_container -h localhost -p 28081:8080 geppetto_persistence
   - bash utilities/test_geppetto_server.sh
-  - sleep 60
-  - docker ps -a
-  - docker network inspect bridge
-  - netstat -nr
-  - netstat -tulpn
-  - lsof -n -i TCP
-  - http_status=$(curl -s -I $1 http://127.0.0.1:8080/org.geppetto.frontend | grep HTTP/1.1 | awk {'print $2'})
-  - echo "$http_status";
+  - sleep 30
+  - http_status=$(curl -s -I $1 http://localhost:28081/org.geppetto.frontend | grep HTTP/1.1 | awk {'print $2'})
+  - echo "$http_status"
   - while [ "$http_status" == "404" ]; do
       echo "Restart run";
       docker stop $(docker ps -a -q);
       docker rm $(docker ps -a -q);
-      travis_retry docker run  -t -dit --name=geppetto_persistence_container -h localhost -p 8080:8080 geppetto_persistence;
+      travis_retry docker run  -t -dit --name=geppetto_persistence_container -h localhost -p 28081:8080 geppetto_persistence;
       bash utilities/test_geppetto_server.sh;
       sleep 100;
-      http_status=$(curl -s -I $1 http://127.0.0.1:3306 | grep HTTP/1.1 | awk {'print $2'});
+      http_status=$(curl -s -I $1 http://localhost:28081 | grep HTTP/1.1 | awk {'print $2'});
       echo "Done restarting";
       echo "$http_status";
-      sudo docker cp geppetto_persistence_container:/home/developer/virgo/serviceability/logs/log.log /etc;
-      tail -n 200 /etc/log.log;
     done
   - sleep 30
-  - http_status=$(curl -s -I $1 http://127.0.0.1:8080 | grep HTTP/1.1 | awk {'print $2'})
+  - http_status=$(curl -s -I $1 http://localhost:28081 | grep HTTP/1.1 | awk {'print $2'})
   - echo "$http_status"
-  - curl -v http://127.0.0.1:8080
-  - curl -v http://127.0.0.1:2375/
-  - curl -v http://127.0.0.1:2375/org.geppetto.frontend
-  - curl -v http://0.0.0.0:6099/
-  - curl -v http://0.0.0.0:6099/org.geppetto.frontend
-  - curl -v http://127.0.0.1:6099/
-  - curl -v http://127.0.0.1:6099/org.geppetto.frontend
-  - curl -v http://localhost:6099/
-  - curl -v http://localhost:6099/org.geppetto.frontend
-  - curl -v http://127.0.0.1:2375/
-  - curl -v http://127.0.0.1:2375/org.geppetto.frontend
-  - curl -v http://127.0.0.1:3306/
-  - curl -v http://192.168.0.1:8080/org.geppetto.frontend
-  - curl -v http://0.0.0.0:8000/
-  - curl -v http://localhost:8000/
-  - curl -v http://192.168.0.1:8080/
-  - curl -v http://192.168.0.1:8080/
-  - curl -v http://0.0.0.0:8080/
-  - curl -v http://172.17.0.1:123/
-  - curl -v http://172.30.100.104/
-  - curl -v http://172.30.100.104:8080/
-  - curl http://localhost:8080
-  - curl http://127.0.0.1:8080
-  - curl -v http://127.0.0.1:5432
-  - curl -v http://127.0.0.1:5432/org.geppetto.frontend
+  - curl http://localhost:28081/org.geppetto.frontend
+  - echo "Current time :$(date +"%T")"
   - docker --version
   - docker ps -a;
   - docker inspect geppetto_persistence;
   - docker inspect geppetto_persistence_container;
+  - docker network inspect host
   - netstat -nr
   - netstat -tulpn
   - docker run --help | grep ip
+  - netstat -nr
+  - netstat -tulpn
+  - lsof -n -i TCP
+  - travis_retry xvfb-run -a --server-args="-screen 0 1024x768x24" casperjs test --includes=PersistenceTestsLogic.js PersistenceTests.js --host=http://localhost:28081/ --engine=slimerjs
+  - docker ps -a
   - echo "Current time :$(date +"%T")"
-  - sudo docker cp geppetto_persistence_container:/home/developer/virgo/serviceability /etc/logs
-  - sudo docker cp geppetto_persistence_container:/home/developer/virgo/repository/usr /etc/repo
-  - tail -n 200 /etc/logs/logs/log.log
+  - sudo docker cp geppetto_persistence_container:/home/developer/virgo/serviceability/logs/log.log /etc
+  - less +F /etc/log.log
   - sleep 10
   - sudo docker logs -t geppetto_persistence_container
-  - docker ps -a;
-  - docker inspect geppetto_persistence;
-  - docker inspect geppetto_persistence_container;
-  - xvfb-run -a --server-args="-screen 0 1024x768x24" casperjs test --includes=PersistenceTestsLogic.js PersistenceTests.js --host=http://127.0.0.1:8080/ --engine=slimerjs
   - docker stop $(docker ps -a -q)
   - docker rm $(docker ps -a -q)

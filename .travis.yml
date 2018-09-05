@@ -65,7 +65,7 @@ script:
   - cd org.geppetto.frontend/src/main/webapp/js/pages/tests/casperjs
   - echo "$TRAVIS_BRANCH"
   - travis_retry docker build -t="geppetto_persistence" --build-arg mainBranch=update-virgo-test --build-arg aKey=$accessKey --build-arg sKey=$secretKey https://github.com/openworm/org.geppetto.git#update-virgo:utilities/docker/geppetto-persistence/
-  - travis_retry docker run -d --name geppetto_persistence_container --network=host geppetto_persistence;
+  - travis_retry docker run -d --name geppetto_persistence_container -p 28081:8080 geppetto_persistence;
   - bash utilities/test_geppetto_server.sh
   - sleep 60
   - docker ps -a
@@ -73,13 +73,13 @@ script:
   - netstat -nr
   - netstat -tulpn
   - lsof -n -i TCP
-  - http_status=$(curl -s -I $1 http://127.0.0.1:8080/org.geppetto.frontend | grep HTTP/1.1 | awk {'print $2'})
+  - http_status=$(curl -s -I $1 http://127.0.0.1:28081/org.geppetto.frontend | grep HTTP/1.1 | awk {'print $2'})
   - echo "$http_status";
   - while [ "$http_status" == "404" ]; do
       echo "Restart run";
       docker stop $(docker ps -a -q);
       docker rm $(docker ps -a -q);
-      travis_retry docker run  -t -dit --name=geppetto_persistence_container --network=host geppetto_persistence;
+      travis_retry docker run  -t -dit --name=geppetto_persistence_container -p 28081:8080 geppetto_persistence;
       bash utilities/test_geppetto_server.sh;
       sleep 100;
       http_status=$(curl -s -I $1 http://127.0.0.1:3306 | grep HTTP/1.1 | awk {'print $2'});
@@ -92,7 +92,7 @@ script:
   - http_status=$(curl -s -I $1 http://127.0.0.1:8080 | grep HTTP/1.1 | awk {'print $2'})
   - echo "$http_status"
   - curl -v http://127.0.0.1:8080
-  - curl -v http://127.0.0.1:2375/
+  - curl -v http://127.0.0.1:28081/
   - curl -v http://127.0.0.1:2375/org.geppetto.frontend
   - curl -v http://0.0.0.0:6099/
   - curl -v http://0.0.0.0:6099/org.geppetto.frontend
@@ -133,6 +133,6 @@ script:
   - docker ps -a;
   - docker inspect geppetto_persistence;
   - docker inspect geppetto_persistence_container;
-  - xvfb-run -a --server-args="-screen 0 1024x768x24" casperjs test --includes=PersistenceTestsLogic.js PersistenceTests.js --host=http://localhost:8080/ --engine=slimerjs
+  - xvfb-run -a --server-args="-screen 0 1024x768x24" casperjs test --includes=PersistenceTestsLogic.js PersistenceTests.js --host=http://localhost:28081/ --engine=slimerjs
   - docker stop $(docker ps -a -q)
   - docker rm $(docker ps -a -q)

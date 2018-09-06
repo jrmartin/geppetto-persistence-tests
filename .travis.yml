@@ -23,7 +23,7 @@ install:
 - cd org.geppetto.core
 - mvn install
 - cd ..
-- git clone https://github.com/openworm/org.geppetto.frontend.git --quiet -b $TRAVIS_BRANCH
+- git clone https://github.com/openworm/org.geppetto.frontend.git --quiet -b update-virgo-test
 - cd org.geppetto.frontend
 - cd ..
 - npm install --silent -g phantomjs 

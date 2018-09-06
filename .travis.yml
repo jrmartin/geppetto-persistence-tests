@@ -73,7 +73,7 @@ script:
   - netstat -nr
   - netstat -tulpn
   - lsof -n -i TCP
-  - http_status=$(curl -s -I $1 http://127.0.0.1:28081/org.geppetto.frontend | grep HTTP/1.1 | awk {'print $2'})
+  - http_status=$(curl -s -I $1 http://localhost:28081/org.geppetto.frontend | grep HTTP/1.1 | awk {'print $2'})
   - echo "$http_status";
   - while [ "$http_status" == "404" ]; do
       echo "Restart run";
@@ -82,18 +82,17 @@ script:
       travis_retry docker run  -t -dit --name=geppetto_persistence_container -p 28081:8080 geppetto_persistence;
       bash utilities/test_geppetto_server.sh;
       sleep 100;
-      http_status=$(curl -s -I $1 http://127.0.0.1:3306 | grep HTTP/1.1 | awk {'print $2'});
+      http_status=$(curl -s -I $1 http://localhost:28081 | grep HTTP/1.1 | awk {'print $2'});
       echo "Done restarting";
       echo "$http_status";
       sudo docker cp geppetto_persistence_container:/home/developer/virgo/serviceability/logs/log.log /etc;
       tail -n 200 /etc/log.log;
     done
   - sleep 30
-  - http_status=$(curl -s -I $1 http://127.0.0.1:8080 | grep HTTP/1.1 | awk {'print $2'})
+  - http_status=$(curl -s -I $1 http://localhost:28081 | grep HTTP/1.1 | awk {'print $2'})
   - echo "$http_status"
   - curl -v http://localhost:28081/
-  - docker run --help | grep ip
-  - xvfb-run -a --server-args="-screen 0 1024x768x24" casperjs test --includes=PersistenceTestsLogic.js PersistenceTests.js --host=http://localhost:28081/ --engine=slimerjs
+  - travis_retry xvfb-run -a --server-args="-screen 0 1024x768x24" casperjs test --includes=PersistenceTestsLogic.js PersistenceTests.js --host=http://localhost:28081/ --engine=slimerjs
   - sudo docker cp geppetto_persistence_container:/home/developer/virgo/serviceability /etc/logs
   - tail -n 200 /etc/logs/logs/log.log
   - sleep 10
